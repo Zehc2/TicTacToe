@@ -3,6 +3,7 @@ package tictactoe;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Scanner;
@@ -16,13 +17,17 @@ public class Board {
 	public boolean isGameOver = false;
 	private TileType playerTileType;
 	private TileType AITileType;
+	private int AIMovesPlayed = 0;
+	private boolean gameStalemate = false;
 
 	/*
 	 * Board converted to binary. For the tile type, 1 is filled, 0 is blank or opposite tile.
 	 */
 
+	ArrayList<Integer> binaryBoard = new ArrayList<>();
 	ArrayList<Integer> binaryBoardCircle = new ArrayList<>();
 	ArrayList<Integer> binaryBoardX = new ArrayList<>();
+	ArrayList<Integer> allOnes = new ArrayList<>(Arrays.asList(1, 1, 1, 1, 1, 1, 1, 1, 1));
 	
 	private boolean isGameOverSim;
 
@@ -35,15 +40,20 @@ public class Board {
 		tileList.set(tileID, changedTile);
 		// updates binary board
 		if(tiletype == CIRCLE) {
+			binaryBoard.set(tileID, 1);
 			binaryBoardCircle.set(tileID, 1);
 
 		} else if(tiletype == X) {
+			binaryBoard.set(tileID, 1);
 			binaryBoardX.set(tileID, 1);
 
 		}
+		if(binaryBoard.equals(allOnes)) {
+			gameStalemate = true;
+		}
 		// checks if the game is over
 		checkIfWon(false, tiletype);
-
+		
 		if(!isGameOver) {
 			printBoard();
 			}
@@ -72,14 +82,15 @@ public class Board {
 	
 
 	public void createBoard() {
-
-		ArrayList<Integer> binaryBoard = new ArrayList<>();
 		// Creates 9 blank tiles and creates binary board
 		for(int i = 0; i < 9; i++) {
 			Tile tile = new Tile(i, BLANK);
 			tileList.add(tile);
+			
+			
 			binaryBoardX.add(0);
 			binaryBoardCircle.add(0);
+			binaryBoard.add(0);
 		}
 		printBoard();
 	}
@@ -149,22 +160,29 @@ public class Board {
 
 	private void AIturn() {
 		
-		Random r = new Random();
-		int changeTile = r.nextInt(8);
+		System.out.println("\n\nAI thinking...\n");
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ArrayList<Integer> validMoves = getValidMoves();
+		Collections.shuffle(validMoves);
+		int changeTile = validMoves.get(1);
+		System.out.println(changeTile);
 		int counter = 0;
 		int recursiveCalls = 0;
+		
+		AIMovesPlayed++;
 		
 		Iterator<Integer> iterator = getValidMoves().iterator();
 		
 	ForEachValidMove:	
 		for(Integer tile : getValidMoves()) {
-			System.out.println("Valid Move List:  " + getValidMoves());
 			if(counter++ != getValidMoves().size() - 1) {
-			
-				System.out.println("counter " + counter);
-			
-					System.out.println(tile + " is a valid move!");
-					// If yes run the simulation to see if it wins
+				//System.out.println(tile + " is a valid move!");
+				// If yes run the simulation to see if it wins
 					update(tile, AITileType, true);
 						if(isGameOverSim == true) {
 							System.out.println("Simulation worked and the sim game ended");
@@ -173,50 +191,55 @@ public class Board {
 							update(tile, AITileType, false);
 							break ForEachValidMove;
 					} else {
-						System.out.println(tile + " is not a winning move");
+						//System.out.println(tile + " is not a winning move");
 					} 
-						
 						update(tile, playerTileType, true);
-						if(isGameOverSim == true) {
-							System.out.println("X can win, block the tile at " + tile);
-							// If it wins then play it in game
-							isGameOverSim = false;
-							update(tile, AITileType, false);
+							if(isGameOverSim == true) {
+							//	System.out.println("X can win, block the tile at " + tile);
+								// If it wins then play it in game
+								isGameOverSim = false;
+								update(tile, AITileType, false);
 							break ForEachValidMove;
 					} else {
-						System.out.println("Opponent has no winning move that needs to be blocked.");
+						//System.out.println("Opponent has no winning move that needs to be blocked.");
 					}
 		} else {
-			
+		// Temporary solution because above can not go to full array size
 			update(8, AITileType, true);
 			if(isGameOverSim == true) {
-				System.out.println("Simulation worked and the sim game ended");
+				//System.out.println("Simulation worked and the sim game ended");
 				// If it wins then play it in game
 				isGameOverSim = false;
 				update(8, AITileType, false);
 				break ForEachValidMove;
 		} else {
-			System.out.println(8 + " is not a winning move");
+			//System.out.println(8 + " is not a winning move");
 		} 
-			
 			update(8, playerTileType, true);
 			if(isGameOverSim == true) {
-				System.out.println("X can win, block the tile at " + 8);
+				//System.out.println("X can win, block the tile at " + 8);
 				// If it wins then play it in game
 				isGameOverSim = false;
 				update(8, AITileType, false);
 				break ForEachValidMove;
 		} else {
-			System.out.println("Opponent has no winning move that needs to be blocked.");
-		}	
+			//System.out.println("Opponent has no winning move that needs to be blocked.");
+		}	// Finishes the 8th call
+			
 			recursiveCalls++;
-			System.out.println("Random Number Generated for AI turn " + recursiveCalls + " Move tile: " + changeTile);
+			// Optimize this a bit?
+			// I think best move in general is to do the middle so if it's open take it on the first move
+			if(AIMovesPlayed == 1) {
+				if(CheckIfValidMove(String.valueOf(4))) {
+					update(4, AITileType, false);
+					break ForEachValidMove;
+				}
+			}
 			String tileChange = String.valueOf(changeTile);
 			if(CheckIfValidMove(tileChange)) {
 				update(changeTile, AITileType, false);
 				break ForEachValidMove;
 			} else {
-				System.out.println("Random move was not valid!");
 				AIturn();
 			}
 		}
@@ -227,6 +250,7 @@ public class Board {
 	}
 
 	public void checkIfWon(boolean simulation, TileType tileType) {
+		if(gameStalemate == false) {
 		ArrayList<Integer> binaryBoard =  returnBinaryBoard(tileType);
 			if(simulation == false) {
 				if(combineBinaryBoard(binaryBoard)) {
@@ -243,8 +267,11 @@ public class Board {
 				isGameOverSim = true;
 				}
 			}
+		} else {
+			System.out.println("Stalemate!");
+			isGameOver = true;
 		}
-	
+	}
 
 	private ArrayList<Integer> returnBinaryBoard(TileType type) {
 		if(type == CIRCLE) return binaryBoardCircle;
